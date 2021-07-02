@@ -78,7 +78,7 @@ func Push() error {
 		return err
 	}
 	if ok {
-		log.Warn().Msg("Telegram Push Msg Successfully")
+		log.Info().Msg("Telegram Push Msg Successfully")
 	}
 	clear()
 	return nil

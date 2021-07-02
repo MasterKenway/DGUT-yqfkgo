@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -41,12 +42,12 @@ func NewService(conf *config.Config) *Service {
 
 	return &Service{
 		Conf: *conf,
-		c:    &http.Client{Jar: jar},
+		c:    &http.Client{Jar: jar, Timeout: time.Duration(5) * time.Second},
 	}
 }
 
 func (s *Service) Login() error {
-	XssToken, err := s.getXssToken()
+	XssToken, err := s.getXSSToken()
 	if err != nil {
 		return err
 	}
@@ -95,11 +96,10 @@ func (s *Service) Login() error {
 	}
 
 	s.Token = "Bearer " + accessToken
-	log.Debug().Msgf("AccessToken: %s", accessToken)
 	return nil
 }
 
-func (s *Service) getXssToken() (string, error) {
+func (s *Service) getXSSToken() (string, error) {
 	req, _ := http.NewRequest("GET", LOGIN_URL, nil)
 	req.Close = true
 
@@ -108,7 +108,6 @@ func (s *Service) getXssToken() (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-
 	contents, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
@@ -116,6 +115,9 @@ func (s *Service) getXssToken() (string, error) {
 
 	re := regexp.MustCompile(`var token = "(.*?)";`)
 	res := re.FindAllStringSubmatch(*(*string)(unsafe.Pointer(&contents)), -1)
+	if len(res) == 0 {
+		return "", errors.New("Failed to Attain XssToken")
+	}
 	token := res[0][1]
 	if len(token) == 0 {
 		return "", errors.New("Token Not Found")
@@ -146,9 +148,6 @@ func (s *Service) ReadPrePost() ([]byte, error) {
 		return nil, err
 	}
 	req.Close = true
-	//req.Header = http.Header{
-	//	AUTH_HEADER: []string{s.Token},
-	//}
 	req.Header.Set(AUTH_HEADER, s.Token)
 
 	resp, err := s.c.Do(req)
@@ -217,10 +216,6 @@ func (s *Service) Post(postData []byte) error {
 			}
 		}
 		return errors.New(msg)
-	}
-	err = push.Push()
-	if err != nil {
-		return err
 	}
 
 	return nil

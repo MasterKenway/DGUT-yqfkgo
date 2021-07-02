@@ -22,9 +22,9 @@ func initService(conf *config.Config) {
 }
 
 func Start(conf *config.Config) {
-	initService(conf)
 	task := func() {
-		for {
+		for i := 0; i < 5; i++ {
+			initService(conf)
 			err := begin()
 			if err != nil {
 				if len(conf.TgBotToken) != 0 {
@@ -44,6 +44,9 @@ func Start(conf *config.Config) {
 				}
 				time.Sleep(time.Duration(10) * time.Second)
 			} else {
+				_, t := gocron.NextRun()
+				_ = push.Append("Next Time to Run: " + t.String())
+				log.Info().Msgf("Next Time to Run: %s", t.String())
 				err = push.Push()
 				if err != nil {
 					log.Warn().Msg(err.Error())
@@ -53,13 +56,14 @@ func Start(conf *config.Config) {
 		}
 	}
 
-	task()
-	s := gocron.NewScheduler()
-	err := s.Every(1).Day().At(conf.RunAt).Do(task)
+	secondsEastOfUTC := int((8 * time.Hour).Seconds())
+	beijing := time.FixedZone("Beijing Time", secondsEastOfUTC)
+	gocron.ChangeLoc(beijing)
+	err := gocron.Every(1).Day().At("5:00").From(gocron.NextTick()).Do(task)
 	if err != nil {
 		log.Panic().Msgf("Schedule Task Failed, %v", err)
 	}
-	<-s.Start()
+	<-gocron.Start()
 }
 
 func begin() error {
@@ -84,6 +88,7 @@ func begin() error {
 
 	json.Set("confirm", 1)
 	json.Set("important_area", nil)
+	json.Set("acid_test_results", nil)
 	//json.Set("current_region", nil)
 
 	bytes, err := json.Encode()
