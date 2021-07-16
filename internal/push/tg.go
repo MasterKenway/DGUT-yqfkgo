@@ -80,7 +80,6 @@ func Push() error {
 	if ok {
 		log.Info().Msg("Telegram Push Msg Successfully")
 	}
-	clear()
 	return nil
 }
 
@@ -92,6 +91,10 @@ func Append(msg string) error {
 	return nil
 }
 
-func clear() {
+func Clear() {
+	if tpWrp == nil {
+		return
+	}
+
 	tpWrp.Tp.Text = ""
 }

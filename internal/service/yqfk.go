@@ -22,6 +22,7 @@ func initService(conf *config.Config) {
 }
 
 func Start(conf *config.Config) {
+	local, _ := time.LoadLocation("Asia/Shanghai")
 	task := func() {
 		for i := 0; i < 5; i++ {
 			initService(conf)
@@ -45,12 +46,23 @@ func Start(conf *config.Config) {
 				time.Sleep(time.Duration(10) * time.Second)
 			} else {
 				_, t := gocron.NextRun()
-				_ = push.Append("Next Time to Run: " + t.String())
+				now := time.Now().In(local).Format(time.RFC1123Z)
+				_ = push.Append("Finished Time: " + now)
+				log.Info().Msgf("Finished Time: " + now)
 				log.Info().Msgf("Next Time to Run: %s", t.String())
-				err = push.Push()
-				if err != nil {
-					log.Warn().Msg(err.Error())
+				for j := 0; j < 5; j++ {
+					if len(conf.TgBotToken) == 0 {
+						break
+					}
+
+					if err = push.Push(); err != nil {
+						log.Warn().Msg(err.Error())
+					} else {
+						break
+					}
+					time.Sleep(time.Duration(1) * time.Second)
 				}
+				push.Clear()
 				break
 			}
 		}
@@ -59,7 +71,7 @@ func Start(conf *config.Config) {
 	secondsEastOfUTC := int((8 * time.Hour).Seconds())
 	beijing := time.FixedZone("Beijing Time", secondsEastOfUTC)
 	gocron.ChangeLoc(beijing)
-	err := gocron.Every(1).Day().At("5:00").From(gocron.NextTick()).Do(task)
+	err := gocron.Every(1).Day().At(conf.RunAt).From(gocron.NextTick()).Do(task)
 	if err != nil {
 		log.Panic().Msgf("Schedule Task Failed, %v", err)
 	}
