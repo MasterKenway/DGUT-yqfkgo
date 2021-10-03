@@ -24,7 +24,7 @@ func initService(conf *config.Config) {
 func Start(conf *config.Config) {
 	local, _ := time.LoadLocation("Asia/Shanghai")
 	task := func() {
-		for i := 0; i < 5; i++ {
+		for i := 0; i < 20; i++ {
 			initService(conf)
 			err := begin()
 			if err != nil {
@@ -39,10 +39,7 @@ func Start(conf *config.Config) {
 					}
 				}
 				log.Warn().Msg("Run Task Again After 10 Seconds...")
-				err = push.Push()
-				if err != nil {
-					log.Warn().Msg(err.Error())
-				}
+
 				time.Sleep(time.Duration(10) * time.Second)
 			} else {
 				_, t := gocron.NextRun()
@@ -50,21 +47,21 @@ func Start(conf *config.Config) {
 				_ = push.Append("Finished Time: " + now)
 				log.Info().Msgf("Finished Time: " + now)
 				log.Info().Msgf("Next Time to Run: %s", t.String())
-				for j := 0; j < 5; j++ {
-					if len(conf.TgBotToken) == 0 {
-						break
-					}
-
-					if err = push.Push(); err != nil {
-						log.Warn().Msg(err.Error())
-					} else {
-						break
-					}
-					time.Sleep(time.Duration(1) * time.Second)
-				}
-				push.Clear()
 				break
 			}
+		}
+
+		if len(conf.TgBotToken) != 0 {
+			for j := 0; j < 5; j++ {
+				err := push.Push()
+				if err != nil {
+					log.Warn().Msg(err.Error())
+				} else {
+					break
+				}
+				time.Sleep(time.Duration(1) * time.Second)
+			}
+			push.Clear()
 		}
 	}
 

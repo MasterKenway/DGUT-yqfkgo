@@ -42,7 +42,7 @@ func NewService(conf *config.Config) *Service {
 
 	return &Service{
 		Conf: *conf,
-		c:    &http.Client{Jar: jar, Timeout: time.Duration(5) * time.Second},
+		c:    &http.Client{Jar: jar, Timeout: time.Duration(10) * time.Second},
 	}
 }
 
