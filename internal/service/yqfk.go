@@ -1,6 +1,7 @@
 package service
 
 import (
+	"net/http/cookiejar"
 	"time"
 )
 
@@ -23,9 +24,12 @@ func initService(conf *config.Config) {
 
 func Start(conf *config.Config) {
 	local, _ := time.LoadLocation("Asia/Shanghai")
+	initService(conf)
+
+	_ = begin()
+
 	task := func() {
 		for i := 0; i < 20; i++ {
-			initService(conf)
 			err := begin()
 			if err != nil {
 				if len(conf.TgBotToken) != 0 {
@@ -112,5 +116,8 @@ func begin() error {
 	}
 	log.Info().Msg("Post Data Successfully")
 
+	// remove cookies in previous request
+	jar, _ := cookiejar.New(nil)
+	serv.c.Jar = jar
 	return nil
 }
